@@ -1,7 +1,6 @@
 ﻿using BancomatClassLibrary;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace BancomatConsoleApp
 {
@@ -50,23 +49,14 @@ namespace BancomatConsoleApp
             Console.WriteLine();
         }
 
-
-        private static void MenuChooseBank()
+        private static int MenuLoop(List<string> menuItems)
         {
-            Console.Clear();
-            List<string> menuItems = new List<string>();
             int index = 0;
             int row = Console.CursorTop;
             int col = Console.CursorLeft;
 
-            foreach (var bank in banks)
-            {
-                menuItems.Add(bank.BankName);
-            }
-            menuItems.Add("Вихід");
             while (true)
             {
-                Console.Clear();
                 DrawMenu(menuItems.ToArray(), row, col, index);
                 switch (Console.ReadKey(true).Key)
                 {
@@ -77,91 +67,73 @@ namespace BancomatConsoleApp
                         index = (index > 0) ? index - 1 : menuItems.Count - 1;
                         break;
                     case ConsoleKey.Enter:
-                        if (index == menuItems.Count - 1)
-                        {
-                            return;
-                        }
-                        selectedBank = banks[index];
-                        MenuChooseBankomat();
-                        break;
+                        return index;
                 }
             }
+        }
 
+        private static void MenuChooseBank()
+        {
+            Console.Clear();
+            List<string> menuItems = new List<string>();
+            foreach (var bank in banks)
+            {
+                menuItems.Add(bank.BankName);
+            }
+            menuItems.Add("Вихід");
+
+            int selectedIndex = MenuLoop(menuItems);
+
+            if (selectedIndex == menuItems.Count - 1)
+            {
+                return;
+            }
+
+            selectedBank = banks[selectedIndex];
+            MenuChooseBankomat();
         }
 
         private static void MenuChooseBankomat()
         {
             Console.Clear();
             List<string> menuItems = new List<string>();
-            int index = 0;
-            int row = Console.CursorTop;
-            int col = Console.CursorLeft;
-
             for (int i = 0; i < selectedBank.BankomatList.Count; i++)
             {
                 menuItems.Add(selectedBank.GetBankomatAddress(i));
             }
             menuItems.Add("Повернутися назад");
-            while (true)
+
+            int selectedIndex = MenuLoop(menuItems);
+
+            if (selectedIndex == menuItems.Count - 1)
             {
-                Console.Clear();
-                DrawMenu(menuItems.ToArray(), row, col, index);
-                switch (Console.ReadKey(true).Key)
-                {
-                    case ConsoleKey.DownArrow:
-                        index = (index + 1) % menuItems.Count;
-                        break;
-                    case ConsoleKey.UpArrow:
-                        index = (index > 0) ? index - 1 : menuItems.Count - 1;
-                        break;
-                    case ConsoleKey.Enter:
-                        if (index == menuItems.Count - 1)
-                        {
-                            MenuChooseBank();
-                        }
-                        else
-                        {
-                            activeBankomat = selectedBank.BankomatList[index];
-                            MenuChooseAuth();
-                        }
-                        break;
-                }
+                MenuChooseBank();
+            }
+            else
+            {
+                activeBankomat = selectedBank.BankomatList[selectedIndex];
+                MenuChooseAuth();
             }
         }
 
         private static void MenuChooseAuth()
         {
-            Console.Clear();
             List<string> menuItems = new List<string> { "Авторизуватися", "Зареєструватися", "Повернутися назад" };
-            int index = 0;
-            int row = Console.CursorTop;
-            int col = Console.CursorLeft;
             while (true)
             {
                 Console.Clear();
-                DrawMenu(menuItems.ToArray(), row, col, index);
-                switch (Console.ReadKey(true).Key)
+                int selectedIndex = MenuLoop(menuItems);
+                switch (selectedIndex)
                 {
-                    case ConsoleKey.DownArrow:
-                        index = (index + 1) % menuItems.Count;
+                    case 0:
+                        if (Authefication())
+                            AccountMenu();
                         break;
-                    case ConsoleKey.UpArrow:
-                        index = (index > 0) ? index - 1 : menuItems.Count - 1;
+                    case 1:
+                        CreateNewAccount();
                         break;
-                    case ConsoleKey.Enter:
-                        switch (index)
-                        {
-                            case 0:
-                                if (Authefication())
-                                    AccountMenu();
-                                break;
-                            case 1:
-                                CreateNewAccount();
-                                break;
-                            case 2:
-                                MenuChooseBankomat();
-                                break;
-                        }
+                    case 2:
+                        MenuChooseBankomat();
                         break;
                 }
             }
@@ -169,66 +141,53 @@ namespace BancomatConsoleApp
 
         static void AccountMenu()
         {
-            Console.Clear();
             List<string> menuItems = new List<string>() { "Переглянути баланс", "Зняти кошти",
                 "Поповнити рахунок", "Перерахувати кошти", "Повернутися назад" };
-            int index = 0;
-            int row = Console.CursorTop;
-            int col = Console.CursorLeft;
             while (true)
             {
                 Console.Clear();
-                DrawMenu(menuItems.ToArray(), row, col, index);
-                switch (Console.ReadKey(true).Key)
+                int selectedIndex = MenuLoop(menuItems);
+
+                switch (selectedIndex)
                 {
-                    case ConsoleKey.DownArrow:
-                        index = (index + 1) % menuItems.Count;
+                    case 0:
+                        currentAccount.GetBalance();
                         break;
-                    case ConsoleKey.UpArrow:
-                        index = (index > 0) ? index - 1 : menuItems.Count - 1;
-                        break;
-                    case ConsoleKey.Enter:
-                        switch (index)
+                    case 1:
+                        Console.WriteLine("Введіть суму для зняття:");
+                        if (int.TryParse(Console.ReadLine(), out int amountWithDraw))
                         {
-                            case 0:
-                                currentAccount.GetBalance();
-                                break;
-                            case 1:
-                                Console.WriteLine("Введіть суму для зняття:");
-                                if (int.TryParse(Console.ReadLine(), out int amountWithDraw))
-                                {
-                                    activeBankomat.WithDrawMoney(currentAccount, amountWithDraw);
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Невірний формат суми.");
-                                }
-                                Console.ReadKey();
-                                break;
-                            case 2:
-                                Console.WriteLine("Введіть суму для поповнення:");
-                                if (int.TryParse(Console.ReadLine(), out int amountPut))
-                                {
-                                    activeBankomat.PutMoney(currentAccount, amountPut);
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Невірний формат суми.");
-                                }
-                                break;
-                            case 3:
-                                Console.WriteLine("Введіть номер рахунку отримувача:");
-                                string receiverAccountNumber = Console.ReadLine();
-                                Console.WriteLine("Введіть суму для перерахування:");
-                                int.TryParse(Console.ReadLine(), out int amountTransfer);
-                                selectedBank.TransferFunds(currentAccount.CardNumber, receiverAccountNumber, amountTransfer);
-                                break;
-                            case 4:
-                                return;
+                            activeBankomat.WithDrawMoney(currentAccount, amountWithDraw);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Невірний формат суми.");
+                        }
+                        Console.ReadKey();
+                        break;
+                    case 2:
+                        Console.WriteLine("Введіть суму для поповнення:");
+                        if (int.TryParse(Console.ReadLine(), out int amountPut))
+                        {
+                            activeBankomat.PutMoney(currentAccount, amountPut);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Невірний формат суми.");
                         }
                         break;
+                    case 3:
+                        Console.WriteLine("Введіть номер рахунку отримувача:");
+                        string receiverAccountNumber = Console.ReadLine();
+                        Console.WriteLine("Введіть суму для перерахування:");
+                        int.TryParse(Console.ReadLine(), out int amountTransfer);
+                        selectedBank.TransferFunds(currentAccount.CardNumber, receiverAccountNumber, amountTransfer);
+                        break;
+                    case 4:
+                        return;
                 }
             }
+
         }
 
         static void CreateNewAccount()
@@ -256,7 +215,6 @@ namespace BancomatConsoleApp
                 {
                     Console.WriteLine("Помилка!! Пін-код повинен містити 4 цифри");
                 }
-                break;
             }
         }
 
